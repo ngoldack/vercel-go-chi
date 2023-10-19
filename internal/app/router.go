@@ -11,7 +11,7 @@ func (app *App) NewRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	rh := handler.NewRootHandler(app.db)
+	rh := handler.NewRootHandler()
 
 	r.Get("/", rh.IndexHandler())
 

@@ -9,6 +9,6 @@ import (
 
 func (ih *RootHandler) IndexHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render.JSON(w, r, map[string]string{"message": fmt.Sprintf("Hello from %s", ih.db.DriverName())})
+		render.JSON(w, r, map[string]string{"message": fmt.Sprintf("Hello, %s!", r.RemoteAddr)})
 	}
 }
