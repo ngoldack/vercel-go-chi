@@ -2,3 +2,4 @@
 go.work
 
 .env*
+build/
