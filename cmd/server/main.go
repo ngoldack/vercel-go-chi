@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ngoldack/vercel-chi/internal/app"
+	"github.com/ngoldack/vercel-chi/pkg/app"
 )
 
 // Vercel is the entrypoint for the vercel serverless function
