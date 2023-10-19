@@ -109,6 +109,7 @@ func (ci CI) test(ctx context.Context) error {
 	src := client.Host().Directory(SrcPath)
 	golang := client.Container().From("golang:latest")
 	golang = golang.WithDirectory("/src", src).WithWorkdir("/src")
+	golang = golang.WithExec([]string{"mkdir -p " + BuildPath})
 	golang = golang.WithExec([]string{"go", "test", "-coverprofile", BuildPath + "cover.out", "./..."})
 
 	out, err := golang.Stdout(ctx)
