@@ -27,38 +27,25 @@ func main() {
 	}
 	defer ci.client.Close()
 
-	errs := make(chan error, 3)
-	done := make(chan struct{})
-
-	go func() {
-		errs <- ci.build(ctx)
-		done <- struct{}{}
-	}()
-
-	go func() {
-		errs <- ci.test(ctx)
-		done <- struct{}{}
-	}()
-
-	go func() {
-		errs <- ci.lint(ctx)
-		done <- struct{}{}
-	}()
-
-	counter := 0
-	for {
-		select {
-		case err := <-errs:
-			if err != nil {
-				slog.Error("an error occurred", "error", err)
-			}
-		case <-done:
-			counter++
-			if counter == 3 {
-				os.Exit(0)
-			}
-		}
+	err = ci.build(ctx)
+	if err != nil {
+		slog.Error("an error occurred", "error", err)
+		os.Exit(1)
 	}
+
+	err = ci.lint(ctx)
+	if err != nil {
+		slog.Error("an error occurred", "error", err)
+		os.Exit(1)
+	}
+
+	err = ci.test(ctx)
+	if err != nil {
+		slog.Error("an error occurred", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("CI passed")
 }
 
 func NewCI(ctx context.Context) (*CI, error) {
