@@ -22,5 +22,6 @@ require (
 
 require (
 	dagger.io/dagger v0.8.8
+	github.com/magefile/mage v1.15.0
 	github.com/stretchr/testify v1.8.4
 )

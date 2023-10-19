@@ -27,25 +27,36 @@ func main() {
 	}
 	defer ci.client.Close()
 
-	err = ci.build(ctx)
-	if err != nil {
+	if err = ci.build(ctx); err != nil {
 		slog.Error("an error occurred", "error", err)
 		os.Exit(1)
 	}
 
-	err = ci.lint(ctx)
-	if err != nil {
+	if err = ci.lint(ctx); err != nil {
 		slog.Error("an error occurred", "error", err)
 		os.Exit(1)
 	}
 
-	err = ci.test(ctx)
-	if err != nil {
+	if err = ci.test(ctx); err != nil {
 		slog.Error("an error occurred", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("CI passed")
+	if v, ok := os.LookupEnv("CI"); ok && (v == "true" || v == "1") {
+		slog.Info("CI detected, uploading coverage")
+		if err = ci.codecov(ctx); err != nil {
+			slog.Error("an error occurred", "error", err)
+			os.Exit(1)
+		}
+
+		slog.Info("GitHub Actions detected, starting deployment")
+		if err = ci.deploy(ctx); err != nil {
+			slog.Error("an error occurred", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	slog.Info("CI finished successfully")
 }
 
 func NewCI(ctx context.Context) (*CI, error) {
@@ -81,7 +92,7 @@ func (ci CI) lint(ctx context.Context) error {
 	src := client.Host().Directory(SrcPath)
 	golangci := client.Container().From("golangci/golangci-lint:latest")
 	golangci = golangci.WithDirectory("/src", src).WithWorkdir("/src")
-	golangci = golangci.WithExec([]string{"golangci-lint", "run", "-v", "./..."})
+	golangci = golangci.WithExec([]string{"golangci-lint", "run", "./..."})
 	out, err := golangci.Stdout(ctx)
 
 	if err != nil {
@@ -98,7 +109,8 @@ func (ci CI) test(ctx context.Context) error {
 	src := client.Host().Directory(SrcPath)
 	golang := client.Container().From("golang:latest")
 	golang = golang.WithDirectory("/src", src).WithWorkdir("/src")
-	golang = golang.WithExec([]string{"go", "test", "./..."})
+	golang = golang.WithExec([]string{"go", "test", "-coverprofile", BuildPath + "cover.out", "./..."})
+
 	out, err := golang.Stdout(ctx)
 	if err != nil {
 		slog.Error("test error", "out", out, "error", err)
@@ -110,6 +122,54 @@ func (ci CI) test(ctx context.Context) error {
 		slog.Error("test error", "out", out, "error", err)
 		return err
 	}
+
+	// copy coverage file to host
+	output := golang.File(BuildPath + "cover.out")
+	_, err = output.Export(ctx, BuildPath+"cover.out")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ci CI) codecov(ctx context.Context) error {
+	client := ci.client.Pipeline("upload-coverage")
+
+	codecov := client.Container().From("alpine:latest")
+	path := client.Host().Directory(BuildPath)
+	codecov = codecov.WithDirectory(BuildPath, path).WithWorkdir(BuildPath)
+
+	// install curl
+	codecov = codecov.WithExec([]string{"apk", "add", "--no-cache", "curl"})
+
+	// Install codecov
+	// curl -Os https://uploader.codecov.io/latest/alpine/codecov chmod +x codecov ./codecov
+	codecov = codecov.WithExec([]string{
+		"curl", "-Os", "https://uploader.codecov.io/latest/alpine/codecov",
+	})
+	codecov = codecov.WithExec([]string{"chmod", "+x", "codecov"})
+	codecov = codecov.WithExec([]string{"./codecov", "-t", os.Getenv("CODECOV_TOKEN")})
+
+	out, err := codecov.Stdout(ctx)
+	if err != nil {
+		slog.Error("codecov error", "out", out, "error", err)
+		return err
+	}
+
+	out, err = codecov.Stderr(ctx)
+	if err != nil {
+		slog.Error("codecov error", "out", out, "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (ci CI) deploy(ctx context.Context) error {
+	_ = ci.client.Pipeline("deploy")
+
+	slog.Info("Vercel auto-deployment configured. Skipping deployment.")
 
 	return nil
 }

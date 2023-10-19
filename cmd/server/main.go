@@ -14,8 +14,8 @@ func main() {
 	app := app.NewApp()
 	r := app.NewRouter()
 
-	log.Println("Starting server on port 8080")
-	err := http.ListenAndServe(":8080", r)
+	log.Println("Starting server on http://localhost:8080")
+	err := http.ListenAndServe("localhost:8080", r)
 	if err != nil {
 		log.Fatal(err)
 	}

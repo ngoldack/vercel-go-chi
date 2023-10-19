@@ -3,3 +3,4 @@ go.work
 
 .env*
 build/
+tmp

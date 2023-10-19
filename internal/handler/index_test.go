@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ngoldack/vercel-chi/api/handler"
+	"github.com/ngoldack/vercel-chi/internal/handler"
 	"github.com/stretchr/testify/require"
 )
 
