@@ -1,22 +1,22 @@
 package main
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"net/http"
 
-	"github.com/ngoldack/vercel-chi/pkg/app"
+	"github.com/ngoldack/vercel-chi/pkg/router"
 )
 
-// Vercel is the entrypoint for the vercel serverless function
-// It is defined in api/vercel.go
 // This file is only used for local development
 func main() {
-	app := app.NewApp()
-	r := app.NewRouter()
+	ctx := context.Background()
+	slog.WarnContext(ctx, "DO NOT USE THIS SERVER IN PRODUCTION!")
 
-	log.Println("Starting server on http://localhost:8080")
+	r := router.NewRouter(ctx)
+	slog.InfoContext(ctx, "Local dev server started!", "addr", "http://localhost:8080")
 	err := http.ListenAndServe("localhost:8080", r)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
